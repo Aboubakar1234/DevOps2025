@@ -9,7 +9,7 @@ pipeline {
   stages {
     stage('Cloning Git') {
       steps {
-        git branch: 'main', credentialsId: 'GitHubCredentials', url: 'https://github.com/Aboubakar1234/DevOps2025/tree/main/TP-1'
+        git branch: 'main', credentialsId: 'GitHubCredentials', url: 'https://github.com/Aboubakar1234/DevOps2025'
       }
     }
     stage('Building backend image') {
@@ -25,7 +25,7 @@ pipeline {
     stage('Publish backend Image') {
       steps {
         script {
-          withDockerRegistry(credentialsId: 'SSH-Agent-Credentials') {
+          withDockerRegistry(credentialsId: 'DockerHub') {
             backendImage.push()
           }
 
@@ -46,7 +46,7 @@ pipeline {
     stage('Publish frontend Image') {
       steps {
         script {
-          withDockerRegistry(credentialsId: 'SSH-Agent-Credentials') {
+          withDockerRegistry(credentialsId: 'DockerHub') {
             frontendImage.push()
           }
         }
