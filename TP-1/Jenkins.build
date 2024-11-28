@@ -1,67 +1,73 @@
-def backendImage = ''
-def frontendImage = ''
 pipeline {
+    agent any
 
-  agent {
-    label 'jenkins-slave'
-  }
-
-  stages {
-    stage('Cloning Git') {
-      steps {
-        git branch: 'main', credentialsId: 'myid', url: '......'
-      }
+    environment {
+        DOCKER_NETWORK = 'efrei'
+        POSTGRES_PASSWORD = 'postgres'
+        DOCKER_USER = 'efrei2023'
+        DOCKER_PASS = 'efrei2023'
     }
-    stage('Building backend image') {
-      steps {
-        script {
-          dir('TP-1/backend') {
-            backendImage = docker.build("efrei2023/backend:1")
 
-          }
+    stages {
+        stage('Clone Repository') {
+            steps {
+                git branch: 'main', url: 'https://github.com/ST2DCE/2024-2025.git'
+            }
         }
-      }
-    }
-    stage('Publish backend Image') {
-      steps {
-        script {
-          withDockerRegistry(credentialsId: 'DockerHubEfrei') {
-            backendImage.push()
-          }
 
+        stage('Build Backend') {
+            steps {
+                sh '''
+                cd TP-1/backend
+                docker build -t backend-aboubakar:1999 .
+                '''
+            }
         }
-      }
-    }
 
-    stage('Building frontend image') {
-      steps {
-        script {
-          dir('TP-1/frontend') {
-            frontendImage = docker.build("efrei2023/frontend:1")
-          }
+        stage('Build Frontend') {
+            steps {
+                sh '''
+                cd TP-1/frontend
+                docker build -t frontend-aboubakar:1999 .
+                '''
+            }
         }
-      }
-    }
 
-    stage('Publish frontend Image') {
-      steps {
-        script {
-          withDockerRegistry(credentialsId: 'DockerHubEfrei') {
-            frontendImage.push()
-          }
+        stage('Run Backend') {
+            steps {
+                sh '''
+                docker run -d --net=${DOCKER_NETWORK} -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} --name backend backend-aboubakar:1999
+                '''
+            }
         }
-      }
+
+        stage('Run Frontend') {
+            steps {
+                sh '''
+                docker run -d --net=${DOCKER_NETWORK} -p 8081:80 -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} --name frontend frontend-aboubakar:1999
+                '''
+            }
+        }
+
+        stage('Test Application') {
+            steps {
+                sh '''
+                curl -I http://localhost:8081
+                '''
+            }
+        }
     }
 
-    stage('Deploy backend container') {
-      steps {
-        echo "Run  backend conatiner "
-      }
+    post {
+        always {
+            sh 'docker logs backend'
+            sh 'docker logs frontend'
+        }
+        cleanup {
+            sh '''
+            docker stop frontend backend
+            docker rm frontend backend
+            '''
+        }
     }
-    stage('Deploy frontend container') {
-      steps {
-        echo "Run  backend container "
-      }
-    }
-  }
 }
